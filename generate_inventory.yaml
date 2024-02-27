@@ -1,0 +1,41 @@
+---
+- name: Generate Kong Konnect Control Planes inventory
+  hosts: kong_gateways
+  become: true
+
+  tasks:
+    # Gather Kong Konnect workspaces for each gateway
+    - name: Get Kong Konnect workspaces
+      uri:
+        url: "https://{{ inventory_hostname }}/workspaces"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ kong_admin_token }}"
+        timeout: 10
+        validate_certs: no  # Adjust based on your security requirements
+      register: workspaces
+
+    # Create new inventory file
+    - name: Create inventory file
+      set_fact:
+        inventory_data: "konnect_control_planes:\n"
+
+    # Loop through gateway workspaces and add to inventory
+    - name: Add workspaces to inventory
+      set_fact:
+        inventory_data: "{{ inventory_data }}{{ '-' if workspace is defined else '' }}{{ inventory_hostname }}\n  - {{ item.name }}\n"
+      loop: "{{ workspaces.json }}"
+      when: workspaces is defined
+
+    - name: Write inventory file
+      delegate_to: localhost
+      copy:
+        content: "{{ inventory_data }}"
+        dest: "inventory_updated.yaml"
+        mode: 0644
+
+  vars:
+    kong_admin_token: "{{ lookup('env', 'KONG_ADMIN_TOKEN') }}"  # Replace with your API token
+
+  tags:
+    - kong_inventory

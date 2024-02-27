@@ -1,0 +1,50 @@
+---
+- name: Manage Kong Konnect Control Planes
+  hosts: localhost
+  become: true
+
+  tasks:
+    - name: Get list of existing control planes
+      uri:
+        url: "https://{{ konnect_api_url }}/control_planes"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ konnect_api_token }}"
+        timeout: 10
+        validate_certs: no  # Adjust based on your security requirements
+      register: existing_control_planes
+
+    - name: Find control planes not in inventory
+      set_fact:
+        control_planes_to_create: "{{ hostvars[item]['konnect_control_plane'] | difference(existing_control_planes.json.results[*].name) }}"
+      loop: "{{ groups }}"
+      when: hostvars[item]['konnect_control_plane'] is defined
+
+    - name: Create missing control planes
+      uri:
+        url: "https://{{ konnect_api_url }}/control_planes"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ konnect_api_token }}"
+          Content-Type: "application/json"
+        body: "{{ lookup('file', '/path/to/control_plane_config.json') }}"
+        timeout: 10
+        validate_certs: no  # Adjust based on your security requirements
+      register: created_control_planes
+      when: control_planes_to_create is not empty
+
+    - name: Update inventory with control plane details (if created)
+      set_fact:
+        inventory_updates: "{{ created_control_planes.json.results | map(attribute='name') | zip(created_control_planes.json.results, true) | list }}"
+      when: created_control_planes is defined
+
+    - name: Add created control planes to inventory
+      add_host:
+        hostname: "{{ item[0] }}"
+        group: "{{ groups[item[1]] }}"
+        ansible_port: 22
+        ansible_ssh_user: "{{ konnect_ssh_user }}"  # Optional if different than default
+        ansible_become: true
+        ansible_become_user: "{{ konnect_become_user }}"  # Optional if different than default
+      loop: "{{ inventory_updates }}"
+      when: inventory_updates is defined

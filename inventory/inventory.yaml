@@ -1,0 +1,20 @@
+# Inventory file for Kong Konnect Control Planes and Groups
+
+[konnect_control_planes]
+# Add control planes directly under this group, specifying their hostnames as inventory entries.
+# Example:
+# my-control-plane1
+
+[konnect_control_plane_groups:children]
+# Define groups of control planes here, referencing the control planes defined above.
+# Example:
+# prod_control_planes:
+#   - my-control-plane1
+#   - my-control-plane2
+# dev_control_planes:
+#   - my-dev-control-plane
+
+# You can further extend this inventory by:
+# * Adding additional groups for different environments or regions.
+# * Nesting groups to create hierarchical structures.
+# * Using variables to dynamically define inventory entries and groups.

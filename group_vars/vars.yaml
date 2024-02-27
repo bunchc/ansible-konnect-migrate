@@ -1,0 +1,3 @@
+# Konnect API details
+konnect_api_url: "https://us.api.konghq.com/v2"  # Replace with your API URL
+konnect_api_token: "{{ lookup('env', 'KONNECT_API_TOKEN') }}"  # Use environment variable for security
