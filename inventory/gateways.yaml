@@ -1,7 +1,10 @@
-[kong_gateways]
-gateway1.example.com
-  kong_admin_api: https://gateway1.example.com:8001
-  kong_admin_token: "{{ lookup('env', 'KONG_ADMIN_TOKEN_1') }}"  # Replace with your actual token
-gateway2.example.com
-  kong_admin_api: https://gateway2.example.com:8001
-  kong_admin_token: "{{ lookup('env', 'KONG_ADMIN_TOKEN_2') }}"  # Replace with your actual token
+kong_gateways:
+  hosts:
+    gateway1.example.com:
+      name: gateway1.example.com
+      kong_admin_api: https://gateway1.example.com:8001
+      kong_admin_token: "{{ lookup('env', 'KONG_ADMIN_TOKEN_1') }}" # Replace with your actual token
+    gateway2.example.com:
+      name: gateway2.example.com
+      kong_admin_api: https://gateway2.example.com:8001
+      kong_admin_token: "{{ lookup('env', 'KONG_ADMIN_TOKEN_2') }}" # Replace with your actual token

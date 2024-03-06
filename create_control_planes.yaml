@@ -11,40 +11,55 @@
         headers:
           Authorization: "Bearer {{ konnect_api_token }}"
         timeout: 10
-        validate_certs: no  # Adjust based on your security requirements
+        validate_certs: no # Adjust based on your security requirements
       register: existing_control_planes
 
-    - name: Find control planes not in inventory
-      set_fact:
-        control_planes_to_create: "{{ hostvars[item]['konnect_control_plane'] | difference(existing_control_planes.json.results[*].name) }}"
-      loop: "{{ groups }}"
-      when: hostvars[item]['konnect_control_plane'] is defined
-
-    - name: Create missing control planes
+    - name: Create control planes that are in the inventory but not on Konnect
       uri:
-        url: "https://{{ konnect_api_url }}/control_planes"
+        url: "{{ konnect_api_url }}/control-planes"
         method: POST
         headers:
           Authorization: "Bearer {{ konnect_api_token }}"
           Content-Type: "application/json"
-        body: "{{ lookup('file', '/path/to/control_plane_config.json') }}"
-        timeout: 10
-        validate_certs: no  # Adjust based on your security requirements
+        body:
+          name: "{{ item.name }}"
+          description: "{{ item.description | default('') }}"
+          auth_type: "{{ item.auth_type | default('pki_client_certs') }}"
+        body_format: json
+        return_content: yes
+      loop: "{{ konnect_control_planes }}"
+      when: item.name not in existing_control_planes.json
       register: created_control_planes
-      when: control_planes_to_create is not empty
 
     - name: Update inventory with control plane details (if created)
       set_fact:
         inventory_updates: "{{ created_control_planes.json.results | map(attribute='name') | zip(created_control_planes.json.results, true) | list }}"
       when: created_control_planes is defined
 
-    - name: Add created control planes to inventory
+    - name: Add created control planes to in-memory inventory
       add_host:
-        hostname: "{{ item[0] }}"
-        group: "{{ groups[item[1]] }}"
-        ansible_port: 22
-        ansible_ssh_user: "{{ konnect_ssh_user }}"  # Optional if different than default
-        ansible_become: true
-        ansible_become_user: "{{ konnect_become_user }}"  # Optional if different than default
+        hostname: "{{ item.name }}"
+        name: "{{ item.name }}"
+        description: "{{ item.description }}"
+        auth_type: "{{ item.auth_type }}"
+        control_plane_endpoint: "{{ item.control_plane_endpoint}}"
+        telemetry_endpoint: "{{ item.telemetry_endpoint }}"
+        controlPlaneID: "{{ item.id }}"
+        cluster_type: "{{ item.cluster_type }}"
+
       loop: "{{ inventory_updates }}"
       when: inventory_updates is defined
+
+    - name: Upload PKI Certificate Chain to Control Planes
+      uri:
+        url: "{{ konnect_api_url }}/control-planes/{{ item.0.controlPlaneID }}/dp-client-certificates"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ konnect_api_token }}"
+          Content-Type: "application/json"
+        body:
+          cert: "{{ item.1.cert }}"
+        body_format: json
+        return_content: yes
+      loop: "{{ konnect_control_planes.hosts | dict2items | subelements('value.certificates') }}"
+      when: item.1 is defined

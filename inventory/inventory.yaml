@@ -1,20 +1,17 @@
 # Inventory file for Kong Konnect Control Planes and Groups
 
-[konnect_control_planes]
-# Add control planes directly under this group, specifying their hostnames as inventory entries.
-# Example:
-# my-control-plane1
-
-[konnect_control_plane_groups:children]
-# Define groups of control planes here, referencing the control planes defined above.
-# Example:
-# prod_control_planes:
-#   - my-control-plane1
-#   - my-control-plane2
-# dev_control_planes:
-#   - my-dev-control-plane
-
-# You can further extend this inventory by:
-# * Adding additional groups for different environments or regions.
-# * Nesting groups to create hierarchical structures.
-# * Using variables to dynamically define inventory entries and groups.
+all:
+  children:
+    konnect_control_planes:
+      hosts:
+        konnect-control-plane-1:
+          name: konnect-control-plane-1
+          controlPlaneID: 9524ec7d-36d9-465d-a8c5-83a3c9390458
+          description: "Control Plane 1"
+          auth_type: pki_client_certs
+          certificates:
+            # See: https://docs.konghq.com/konnect/gateway-manager/data-plane-nodes/secure-communications/#set-certificate-authentication-mode
+            - name: "root-ca-1"
+              cert: "Key Goes Here"
+            - name: "root-ca-2"
+              cert: "Key Goes Here"
